@@ -8,19 +8,20 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <cstring>
-#include <sys/select.h>
 
-Server::Server(int port, const std::string& doc_root)
-    : port(port), doc_root(doc_root), addrlen(sizeof(address)) {
+Server::Server(int port, const std::string& doc_root, size_t thread_pool_size)
+    : port(port), doc_root(doc_root), addrlen(sizeof(address)), thread_pool(thread_pool_size) {
     initServer();
 }
 
 void Server::initServer() {
+    // 创建 socket 文件描述符
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
         Logger::log("Socket creation error");
         exit(EXIT_FAILURE);
     }
 
+    // 绑定地址和端口
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(port);
@@ -30,7 +31,8 @@ void Server::initServer() {
         exit(EXIT_FAILURE);
     }
 
-    if (listen(server_fd, 3) < 0) {
+    // 监听端口
+    if (listen(server_fd, 1024) < 0) {
         Logger::log("Listen failed");
         exit(EXIT_FAILURE);
     }
@@ -40,42 +42,21 @@ void Server::initServer() {
 
 void Server::start() {
     Logger::log("Server started");
-
-    fd_set master_set, working_set;
-    FD_ZERO(&master_set);
-    FD_SET(server_fd, &master_set);
-    int max_sd = server_fd;
-
     while (true) {
-        working_set = master_set;
-        int activity = select(max_sd + 1, &working_set, nullptr, nullptr, nullptr);
-
-        if (activity < 0 && errno != EINTR) {
-            Logger::log("Select error");
-            exit(EXIT_FAILURE);
-        }
-
-        for (int i = 0; i <= max_sd; ++i) {
-            if (FD_ISSET(i, &working_set)) {
-                if (i == server_fd) {
-                    int client_socket;
-                    if ((client_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
-                        Logger::log("Accept failed");
-                        exit(EXIT_FAILURE);
-                    }
-                    Logger::log("Connection accepted");
-                    FD_SET(client_socket, &master_set);
-                    if (client_socket > max_sd) {
-                        max_sd = client_socket;
-                    }
-                } else {
-                    handleRequest(i);
-                    close(i);
-                    FD_CLR(i, &master_set);
-                }
-            }
-        }
+        acceptConnection();
     }
+}
+
+void Server::acceptConnection() {
+    int client_socket;
+    if ((client_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
+        Logger::log("Accept failed");
+        return;
+    }
+    Logger::log("Connection accepted");
+
+    // 将请求处理任务添加到线程池中
+    thread_pool.enqueue(&Server::handleRequest, this, client_socket);
 }
 
 void Server::handleRequest(int client_socket) {
@@ -87,4 +68,5 @@ void Server::handleRequest(int client_socket) {
     HttpRequest request(buffer);
     RequestHandler handler(doc_root);
     handler.handleRequest(request, client_socket);
+    close(client_socket);
 }
