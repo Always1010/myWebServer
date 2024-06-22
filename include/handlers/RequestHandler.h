@@ -13,7 +13,8 @@ public:
 
 private:
     std::string doc_root;
-    std::map<std::string, std::string> mime_types;
+    static std::map<std::string, std::string> mime_types;
+    static void initializeMimeTypes();
 
     void handleGetRequest(const HttpRequest& request, HttpResponse& response, int client_socket);
     std::string getMimeType(const std::string& path) const;
