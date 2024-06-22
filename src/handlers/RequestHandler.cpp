@@ -3,9 +3,18 @@
 #include <sstream>
 #include <filesystem>
 
+// 定义静态成员变量
+std::map<std::string, std::string> RequestHandler::mime_types;
+
 RequestHandler::RequestHandler(const std::string& doc_root)
     : doc_root(doc_root) {
-    // 初始化常见的 MIME 类型
+    // 如果 MIME 类型尚未初始化，则进行初始化
+    if (mime_types.empty()) {
+        initializeMimeTypes();
+    }
+}
+
+void RequestHandler::initializeMimeTypes() {
     mime_types[".html"] = "text/html";
     mime_types[".css"] = "text/css";
     mime_types[".js"] = "application/javascript";
@@ -37,12 +46,8 @@ void RequestHandler::handleGetRequest(const HttpRequest& request, HttpResponse& 
     std::ifstream file(file_path, std::ios::binary);
 
     if (file.is_open()) {
-        // 获取文件大小
-        // std::filesystem::path fs_path(file_path);
-        // auto file_size = std::filesystem::file_size(fs_path);
         std::string mime_type = getMimeType(file_path);
         response.setHeader("Content-Type", mime_type);
-        // response.setHeader("Content-Length", std::to_string(file_size));
         response.setHeader("Transfer-Encoding", "chunked");
         response.sendChunkedResponse(client_socket, file);
     } else {
