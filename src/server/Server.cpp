@@ -9,8 +9,8 @@
 #include <netinet/in.h>
 #include <cstring>
 
-Server::Server(int port, const std::string& doc_root, size_t thread_pool_size)
-    : port(port), doc_root(doc_root), addrlen(sizeof(address)), thread_pool(thread_pool_size) {
+Server::Server(int port, const std::string& doc_root, const std::string& default_route, size_t thread_pool_size)
+    : port(port), doc_root(doc_root), default_route(default_route), addrlen(sizeof(address)), thread_pool(thread_pool_size) {
     initServer();
 }
 
@@ -66,7 +66,7 @@ void Server::handleRequest(int client_socket) {
     Logger::log("Request received:\n" + std::string(buffer));
 
     HttpRequest request(buffer);
-    RequestHandler handler(doc_root);
+    RequestHandler handler(doc_root,default_route);
     handler.handleRequest(request, client_socket);
     close(client_socket);
 }
