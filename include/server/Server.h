@@ -7,13 +7,14 @@
 
 class Server {
 public:
-    Server(int port, const std::string& doc_root, size_t thread_pool_size);
+    Server(int port, const std::string& doc_root, const std::string& default_route, size_t thread_pool_size);
     void start();
 
 private:
     int server_fd;
     int port;
     std::string doc_root;
+    std::string default_route;
     struct sockaddr_in address;
     int addrlen;
 

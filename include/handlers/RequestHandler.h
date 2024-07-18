@@ -8,11 +8,12 @@
 
 class RequestHandler {
 public:
-    RequestHandler(const std::string& doc_root);
+    RequestHandler(const std::string& doc_root, const std::string& default_route);
     void handleRequest(const HttpRequest& request, int client_socket);
 
 private:
     std::string doc_root;
+    std::string default_route;
     static std::map<std::string, std::string> mime_types;
     static void initializeMimeTypes();
 

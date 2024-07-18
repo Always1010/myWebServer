@@ -6,8 +6,8 @@
 // 定义静态成员变量
 std::map<std::string, std::string> RequestHandler::mime_types;
 
-RequestHandler::RequestHandler(const std::string& doc_root)
-    : doc_root(doc_root) {
+RequestHandler::RequestHandler(const std::string& doc_root, const std::string& default_route)
+    : doc_root(doc_root), default_route(default_route) {
     // 如果 MIME 类型尚未初始化，则进行初始化
     if (mime_types.empty()) {
         initializeMimeTypes();
@@ -42,6 +42,12 @@ void RequestHandler::handleRequest(const HttpRequest& request, int client_socket
 
 void RequestHandler::handleGetRequest(const HttpRequest& request, HttpResponse& response, int client_socket) {
     std::string path = request.getPath();
+
+    // 检查路径是否为根路径，如果是，则使用默认路由
+    if (path == "/") {
+        path = "/" + default_route;
+    }
+
     std::string file_path = doc_root + path;
     std::ifstream file(file_path, std::ios::binary);
 
